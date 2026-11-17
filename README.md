@@ -1,6 +1,6 @@
 # Building Next Gen Autonomous Agentic Systems with Google — Silicon Valley
 
-Hands-on companion for the Google × AICamp build lab, **Building Resilient Asynchronous Agents**. Speaker listed in the event brief: **Logan Hennessy, Google**. This community workshop repository is not an official Google product.
+Hands-on companion for the Google × AICamp build lab, **Building Resilient Asynchronous Agents**. Speakers listed in the updated event brief: **Logan Hennessy (Google)** and **Annie Wang (Google)**. This community workshop repository is not an official Google product.
 
 Build a checkpointed research agent that collects three synthetic signals concurrently, analyzes them, and produces a review-required report. Inject a transient failure, inspect persisted attempts, then resume without repeating finished stages. Optionally expose the same workflow as Google ADK function tools and deploy an ADK API to Cloud Run.
 
@@ -15,6 +15,9 @@ python3 -m unittest discover -s tests -v
 python3 -m resilient_agent start demo-1 "release readiness" --fail-once collect
 python3 -m resilient_agent show demo-1
 python3 -m resilient_agent resume demo-1
+python3 -m resilient_agent --db recovery.db start recovery-1 "incident triage" --fail-once analyze --retries 0
+# The previous command intentionally exits 1 with a failed checkpoint.
+python3 -m resilient_agent --db recovery.db resume recovery-1
 ```
 
 `start` retries an injected one-time collect failure and saves progress to `workshop.db`. Reusing the same job ID and topic returns the same report; conflicting input is rejected. Reports and source signals are deliberately synthetic, **not live data or AI analysis**. Never use them for operational decisions without human review.
@@ -33,8 +36,8 @@ The ADK/Cloud Run lab requires an existing Google Cloud project, enabled APIs, s
 `CLI / ADK tool → JobStore (SQLite) → collect (async fan-out) → analyze → report`
 
 - `resilient_agent/engine.py`: async orchestration, bounded retry, checkpointed state, synthetic tool adapter.
-- `resilient_agent/__main__.py`: start / show / resume CLI.
-- `resilient_agent/agent.py`: optional Google ADK agent and function tools (requires `requirements.txt`).
+- `resilient_agent/__main__.py`: start / show / resume CLI with configurable retry count.
+- `resilient_agent/agent.py`: optional Google ADK agent with start, inspect, and resume tools (requires `requirements.txt`).
 - `tests/`: offline tests for idempotency, retry, restart/resume and checkpoint invariants.
 
 Cloud Shell's local SQLite file survives a process restart within the same Cloud Shell home, but is not a shared production database. Cloud Run's container filesystem is ephemeral. This is a workshop teaching implementation, not a production-grade distributed job queue; see [production upgrades](docs/google-cloud.md#production-upgrades).

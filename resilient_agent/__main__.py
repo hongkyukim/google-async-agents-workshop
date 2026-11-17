@@ -17,17 +17,21 @@ def main():
     start.add_argument("job_id")
     start.add_argument("topic")
     start.add_argument("--fail-once", choices=STAGES)
+    start.add_argument("--retries", type=int, default=2, help="retries per stage (default: 2)")
     resume = commands.add_parser("resume")
     resume.add_argument("job_id")
+    resume.add_argument("--retries", type=int, default=2, help="retries per stage (default: 2)")
     show = commands.add_parser("show")
     show.add_argument("job_id")
     args = parser.parse_args()
+    if args.command != "show" and args.retries < 0:
+        parser.error("--retries must be nonnegative")
     store = JobStore(args.db)
     try:
         if args.command == "start":
             store.create(args.job_id, args.topic, args.fail_once)
         job = store.get(args.job_id) if args.command == "show" else asyncio.run(
-            run_job(store, args.job_id)
+            run_job(store, args.job_id, retries=args.retries)
         )
     except (KeyError, ValueError) as exc:
         parser.error(str(exc))
