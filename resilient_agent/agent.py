@@ -31,11 +31,23 @@ def inspect_research(job_id: str) -> dict:
         return {"error": "unknown job_id"}
 
 
+def resume_research(job_id: str) -> dict:
+    """Resume a failed research job from its last completed checkpoint."""
+    store = JobStore(os.getenv("WORKSHOP_DB", "workshop.db"))
+    try:
+        job = asyncio.run(run_job(store, job_id))
+        return {"status": job["status"], "job_id": job_id, "report": job["data"].get("report"),
+                "error": job["error"]}
+    except KeyError:
+        return {"error": "unknown job_id"}
+
+
 root_agent = Agent(
     name="resilient_agent",
     model="gemini-2.5-flash",
     instruction=("You help users run synthetic research jobs. For each new request, choose a short "
-                 "job_id and call start_research. Use inspect_research to check status. "
+                 "job_id and call start_research. Use inspect_research to check status; if a job "
+                 "has failed, use resume_research to retry from its checkpoint. "
                  "Never claim synthetic findings are real or that a human approved the report."),
-    tools=[start_research, inspect_research],
+    tools=[start_research, inspect_research, resume_research],
 )
